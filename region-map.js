@@ -330,6 +330,7 @@
     }
 
     connectedCallback() {
+      console.log('[region-map DEBUG] connectedCallback, current attributes:', this.getAttributeNames());
       this._readAttributes();
       loadMapLibre()
         .then(() => this._initMap())
@@ -337,6 +338,7 @@
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
+      console.log('[region-map DEBUG] attributeChangedCallback', name, 'newVal length:', newVal ? newVal.length : 0);
       if (oldVal === newVal) return;
       this._readAttribute(name);
       if (name === 'data-shops') this._applyFilters();
