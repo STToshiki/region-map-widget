@@ -331,9 +331,29 @@
 
     connectedCallback() {
       this._readAttributes();
+      this._fixWixParentWidth();
       loadMapLibre()
         .then(() => this._initMap())
         .catch((err) => console.error('[region-map]', err));
+    }
+
+    // Wix Studio の「要素を自動的にドッキング」機能が、レスポンシブ計算の際に
+    // この要素の直接の親 div へ余分な margin-right を残してしまうことがあり、
+    // その結果マップの右側に余白ができてしまう。Wixの内部DOM構造は非公開/変更
+    // され得るため、Velo側からは修正できない。Custom Element自身の
+    // connectedCallback は通常のブラウザコンテキストで実行されるため、ここで
+    // 直接の親要素の margin-right だけを都度リセットする。
+    _fixWixParentWidth() {
+      const applyFix = () => {
+        const parent = this.parentElement;
+        if (parent && parent.style) {
+          parent.style.setProperty('margin-right', '0px', 'important');
+        }
+      };
+      applyFix();
+      setTimeout(applyFix, 300);
+      setTimeout(applyFix, 1200);
+      window.addEventListener('resize', applyFix);
     }
 
     attributeChangedCallback(name, oldVal, newVal) {
