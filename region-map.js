@@ -359,9 +359,13 @@
           while (node && node !== section) {
             node.style.setProperty('max-width', 'none', 'important');
             node.style.setProperty('width', '100%', 'important');
+            node.style.setProperty('margin-left', '0px', 'important');
+            node.style.setProperty('margin-right', '0px', 'important');
             node = node.parentElement;
           }
           section.style.setProperty('max-width', 'none', 'important');
+          section.style.setProperty('margin-left', '0px', 'important');
+          section.style.setProperty('margin-right', '0px', 'important');
         }
       };
       applyFix();
