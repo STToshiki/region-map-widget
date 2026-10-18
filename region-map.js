@@ -25,19 +25,14 @@
   const MAPLIBRE_CSS = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
   const PMTILES_JS = 'https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js';
   const BASEMAPS_JS = 'https://cdn.jsdelivr.net/npm/@protomaps/basemaps@5.7.2/dist/basemaps.js';
-  // このスクリプト自身 (region-map.js) と同じディレクトリに置いた
-  // yuzawa.pmtiles を参照する。GitHub Pages上のURLをハードコードするのではなく、
-  // 実行中の<script>タグのsrcから動的に求めることで、フォーク/別ホストでも動く。
-  function resolvePmtilesUrl() {
-    const scripts = document.getElementsByTagName('script');
-    for (let i = scripts.length - 1; i >= 0; i--) {
-      const src = scripts[i].src || '';
-      if (src.includes('region-map.js')) {
-        return src.replace(/region-map\.js(\?.*)?$/, 'yuzawa.pmtiles');
-      }
-    }
-    return 'yuzawa.pmtiles';
-  }
+  // yuzawa.pmtiles の配信元。
+  // GitHub Pages (sttoshiki.github.io) はブラウザ向けレスポンスに対して
+  // Range Request と gzip/brotli 圧縮を同時に適用してしまい、PMTilesが要求する
+  // バイト範囲取得が「圧縮後データの一部」になってしまって壊れる
+  // （ブラウザ側で ERR_CONTENT_DECODING_FAILED になる）。jsDelivrのGitHub CDN
+  // 経由でも同じ問題が起きたため、Range Requestに圧縮をかけない
+  // raw.githubusercontent.com から直接配信する。
+  const PMTILES_URL = 'https://raw.githubusercontent.com/STToshiki/region-map-widget/main/yuzawa.pmtiles';
 
   const GENRES = [
     { id: 'eat', ja: '食べる', en: 'Eat', icon: '🍴', color: '#e8734a' },
@@ -521,7 +516,7 @@
         sources: {
           protomaps: {
             type: 'vector',
-            url: 'pmtiles://' + resolvePmtilesUrl(),
+            url: 'pmtiles://' + PMTILES_URL,
             attribution:
               '<a href="https://protomaps.com" target="_blank">Protomaps</a> © <a href="https://openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
           },
