@@ -415,6 +415,23 @@
         this._flyToArea(this._activeArea, true);
         this.dispatchEvent(new CustomEvent('ready', { bubbles: true, composed: true }));
       });
+
+      this._observeResize();
+    }
+
+    // Wixはページのレイアウト計算（セクション幅の確定など）が、この要素が
+    // 初期化された後に遅れて走ることがある。MapLibreは生成時のコンテナ
+    // サイズでcanvasを確保するため、その後にコンテナが広がっても地図側が
+    // 気づかず、読み込み時のサイズのまま小さく表示され続けてしまう。
+    // ResizeObserverでコンテナの実サイズ変化を監視し、都度 map.resize() を
+    // 呼んで地図のcanvasをその時点の実際のサイズに合わせ直す。
+    _observeResize() {
+      if (!window.ResizeObserver) return;
+      const ro = new ResizeObserver(() => {
+        if (this._map) this._map.resize();
+      });
+      ro.observe(this._els.map);
+      this._resizeObserver = ro;
     }
 
     _applyStyle() {
