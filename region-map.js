@@ -344,11 +344,24 @@
     // され得るため、Velo側からは修正できない。Custom Element自身の
     // connectedCallback は通常のブラウザコンテキストで実行されるため、ここで
     // 直接の親要素の margin-right だけを都度リセットする。
+    // また、セクションの「Max Width」設定（例: 1600px）により、それより広い
+    // 画面では左右に均等な余白ができてしまうため、closest('section') までの
+    // 祖先すべての max-width も解除し、画面幅いっぱいに広げる。
     _fixWixParentWidth() {
       const applyFix = () => {
         const parent = this.parentElement;
         if (parent && parent.style) {
           parent.style.setProperty('margin-right', '0px', 'important');
+        }
+        const section = this.closest('section');
+        if (section) {
+          let node = this.parentElement;
+          while (node && node !== section) {
+            node.style.setProperty('max-width', 'none', 'important');
+            node.style.setProperty('width', '100%', 'important');
+            node = node.parentElement;
+          }
+          section.style.setProperty('max-width', 'none', 'important');
         }
       };
       applyFix();
