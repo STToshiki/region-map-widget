@@ -332,6 +332,7 @@
     connectedCallback() {
       this._readAttributes();
       this._fixWixParentWidth();
+      this._fixWixParentHeight();
       loadMapLibre()
         .then(() => this._initMap())
         .catch((err) => console.error('[region-map]', err));
@@ -349,6 +350,33 @@
         if (parent && parent.style) {
           parent.style.setProperty('margin-right', '0px', 'important');
         }
+      };
+      applyFix();
+      setTimeout(applyFix, 300);
+      setTimeout(applyFix, 1200);
+      window.addEventListener('resize', applyFix);
+    }
+
+    // Wixエディタ側で、このセクションの高さが固定px値（エディタ上での見た目
+    // の高さ）で保存されてしまうことがあり、実際の画面の高さより小さいと
+    // 地図の下に余白ができてしまう。この要素を包む <section> を見つけ、
+    // その上端から画面下端までの高さに動的に合わせることで、画面いっぱいに
+    // 地図を表示する。間にある固定高さの中間div（Wixが自動生成するラッパー）
+    // も height:100% に揃えないと、section だけ広げても反映されないため、
+    // section に到達するまでの祖先要素すべてを対象にする。
+    _fixWixParentHeight() {
+      const applyFix = () => {
+        const section = this.closest('section');
+        if (!section) return;
+        let node = this.parentElement;
+        while (node && node !== section) {
+          node.style.setProperty('height', '100%', 'important');
+          node = node.parentElement;
+        }
+        const top = section.getBoundingClientRect().top;
+        const available = Math.max(window.innerHeight - top, 300);
+        section.style.setProperty('height', available + 'px', 'important');
+        if (this._map) this._map.resize();
       };
       applyFix();
       setTimeout(applyFix, 300);
