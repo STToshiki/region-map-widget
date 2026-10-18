@@ -2,12 +2,15 @@
  * <region-map> Custom Element
  * Wix Studio / Velo 用 オリジナル地域マップ Webコンポーネント
  *
- * 外部ライブラリ: MapLibre GL JS (CDNから動的ロード)
- * 地図タイル: MapTiler (要APIキー。属性 maptiler-key で指定)
+ * 外部ライブラリ: MapLibre GL JS + PMTiles + Protomaps Basemaps (すべてCDNから動的ロード)
+ * 地図タイル: Protomaps（OpenStreetMapデータのODbLライセンス、商用利用時も帰属表示のみで可）。
+ *             MapTilerの無料プランは非商用利用限定のため、APIキー不要・完全無料で
+ *             商用利用できるこの構成に変更した。タイルは湯沢市周辺のみを切り出した
+ *             静的ファイル (yuzawa.pmtiles) をこのリポジトリ内でホストしている。
  *
  * 属性 (Velo側の $w('#regionMap').setAttribute(...) で更新する想定):
- *   - maptiler-key : string   MapTiler APIキー (必須)
- *   - map-style    : string   MapTiler スタイル名 省略時 'streets-v2'
+ *   - map-style    : string   Protomaps Basemaps のフレーバー名
+ *                              ('light'|'dark'|'white'|'grayscale'|'black') 省略時 'light'
  *   - lang         : 'ja'|'en'  表示言語 省略時 'ja'
  *   - data-areas   : JSON文字列  [{id,nameJa,nameEn,center:[lng,lat],zoom}, ...]
  *   - data-shops   : JSON文字列  [{id,name,nameEn,address,lat,lng,area,genres:[],
@@ -20,6 +23,21 @@
 (function () {
   const MAPLIBRE_JS = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
   const MAPLIBRE_CSS = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+  const PMTILES_JS = 'https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js';
+  const BASEMAPS_JS = 'https://cdn.jsdelivr.net/npm/@protomaps/basemaps@5.7.2/dist/basemaps.js';
+  // このスクリプト自身 (region-map.js) と同じディレクトリに置いた
+  // yuzawa.pmtiles を参照する。GitHub Pages上のURLをハードコードするのではなく、
+  // 実行中の<script>タグのsrcから動的に求めることで、フォーク/別ホストでも動く。
+  function resolvePmtilesUrl() {
+    const scripts = document.getElementsByTagName('script');
+    for (let i = scripts.length - 1; i >= 0; i--) {
+      const src = scripts[i].src || '';
+      if (src.includes('region-map.js')) {
+        return src.replace(/region-map\.js(\?.*)?$/, 'yuzawa.pmtiles');
+      }
+    }
+    return 'yuzawa.pmtiles';
+  }
 
   const GENRES = [
     { id: 'eat', ja: '食べる', en: 'Eat', icon: '🍴', color: '#e8734a' },
@@ -52,23 +70,39 @@
     },
   };
 
-  let mapLibreLoadPromise = null;
-  function loadMapLibre() {
-    if (window.maplibregl) return Promise.resolve();
-    if (mapLibreLoadPromise) return mapLibreLoadPromise;
-    mapLibreLoadPromise = new Promise((resolve, reject) => {
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load script: ' + src));
+      document.head.appendChild(script);
+    });
+  }
+
+  let libsLoadPromise = null;
+  function loadLibs() {
+    if (window.maplibregl && window.pmtiles && window.basemaps) return Promise.resolve();
+    if (libsLoadPromise) return libsLoadPromise;
+    libsLoadPromise = (async () => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = MAPLIBRE_CSS;
       document.head.appendChild(link);
 
-      const script = document.createElement('script');
-      script.src = MAPLIBRE_JS;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load MapLibre GL JS'));
-      document.head.appendChild(script);
-    });
-    return mapLibreLoadPromise;
+      await Promise.all([
+        window.maplibregl ? Promise.resolve() : loadScript(MAPLIBRE_JS),
+        window.pmtiles ? Promise.resolve() : loadScript(PMTILES_JS),
+        window.basemaps ? Promise.resolve() : loadScript(BASEMAPS_JS),
+      ]);
+
+      if (!window.__pmtilesProtocolRegistered) {
+        const protocol = new window.pmtiles.Protocol();
+        window.maplibregl.addProtocol('pmtiles', protocol.tile);
+        window.__pmtilesProtocolRegistered = true;
+      }
+    })();
+    return libsLoadPromise;
   }
 
   const TEMPLATE = `
@@ -289,7 +323,7 @@
 
   class RegionMapElement extends HTMLElement {
     static get observedAttributes() {
-      return ['lang', 'data-areas', 'data-shops', 'maptiler-key', 'map-style'];
+      return ['lang', 'data-areas', 'data-shops', 'map-style'];
     }
 
     constructor() {
@@ -333,7 +367,7 @@
       this._readAttributes();
       this._fixWixParentWidth();
       this._fixWixParentHeight();
-      loadMapLibre()
+      loadLibs()
         .then(() => this._initMap())
         .catch((err) => console.error('[region-map]', err));
     }
@@ -438,17 +472,11 @@
 
     // ---- Map ----
     _initMap() {
-      const key = this.getAttribute('maptiler-key') || '';
-      const styleName = this.getAttribute('map-style') || 'streets-v2';
-      const styleUrl = key
-        ? `https://api.maptiler.com/maps/${styleName}/style.json?key=${encodeURIComponent(key)}`
-        : 'https://demotiles.maplibre.org/style.json';
-
       this._map = new window.maplibregl.Map({
         container: this._els.map,
-        style: styleUrl,
-        center: [139.767, 35.681],
-        zoom: 12,
+        style: this._buildStyle(),
+        center: [140.55, 39.075],
+        zoom: 11,
         attributionControl: true,
       });
       this._map.addControl(new window.maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
@@ -479,14 +507,32 @@
       this._resizeObserver = ro;
     }
 
+    // Protomaps Basemaps のレイヤー定義から MapLibre スタイルJSONを組み立てる。
+    // タイルソースには、このリポジトリに同梱している yuzawa.pmtiles
+    // （湯沢市周辺のみを切り出したOpenStreetMapデータ、ODbLライセンス・帰属表示のみで
+    // 商用利用可）を pmtiles:// プロトコル経由で参照する。
+    _buildStyle() {
+      const flavorName = this.getAttribute('map-style') || 'light';
+      const flavor = window.basemaps.namedFlavor(flavorName);
+      return {
+        version: 8,
+        glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+        sprite: 'https://protomaps.github.io/basemaps-assets/sprites/v4/' + flavorName,
+        sources: {
+          protomaps: {
+            type: 'vector',
+            url: 'pmtiles://' + resolvePmtilesUrl(),
+            attribution:
+              '<a href="https://protomaps.com" target="_blank">Protomaps</a> © <a href="https://openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
+          },
+        },
+        layers: window.basemaps.layers('protomaps', flavor, { lang: this._lang }),
+      };
+    }
+
     _applyStyle() {
       if (!this._map) return;
-      const key = this.getAttribute('maptiler-key') || '';
-      const styleName = this.getAttribute('map-style') || 'streets-v2';
-      const styleUrl = key
-        ? `https://api.maptiler.com/maps/${styleName}/style.json?key=${encodeURIComponent(key)}`
-        : 'https://demotiles.maplibre.org/style.json';
-      this._map.setStyle(styleUrl);
+      this._map.setStyle(this._buildStyle());
     }
 
     // ---- UI: Area tabs ----
@@ -558,6 +604,8 @@
       this._renderAreaTabs();
       this._renderGenreChips();
       this._applyFilters();
+      // 地図の道路・地名ラベルの言語も切り替える（basemaps.layers の lang オプション）。
+      if (this._mapReady) this._applyStyle();
     }
 
     _matchesFilters(shop) {
