@@ -36,7 +36,6 @@
 
   const GENRES = [
     { id: 'eat', ja: '食べる', en: 'Eat', icon: '🍴', color: '#e8734a' },
-    { id: 'cafe', ja: 'カフェ', en: 'Cafe', icon: '☕', color: '#b07d3f' },
     { id: 'shop', ja: '買う', en: 'Shop', icon: '🛍️', color: '#4a90a4' },
     { id: 'sightseeing', ja: '観光', en: 'Sightseeing', icon: '⛩️', color: '#8a5fb0' },
     { id: 'stay', ja: '宿泊', en: 'Stay', icon: '🛏️', color: '#5a9e6f' },
@@ -100,8 +99,8 @@
     return libsLoadPromise;
   }
 
-  const TEMPLATE = `
-    <link rel="stylesheet" href="${MAPLIBRE_CSS}">
+  const TEMPLATE = \`
+    <link rel="stylesheet" href="\${MAPLIBRE_CSS}">
     <style>
       :host {
         display: block;
@@ -314,7 +313,7 @@
       </div>
       <div class="rm-empty-toast"></div>
     </div>
-  `;
+  \`;
 
   class RegionMapElement extends HTMLElement {
     static get observedAttributes() {
@@ -581,7 +580,7 @@
         const active = this._activeGenres.has(g.id);
         btn.className = 'rm-chip' + (active ? ' active' : '');
         btn.type = 'button';
-        btn.innerHTML = `<span class="rm-icon">${g.icon}</span>${this._lang === 'en' ? g.en : g.ja}`;
+        btn.innerHTML = \`<span class="rm-icon">\${g.icon}</span>\${this._lang === 'en' ? g.en : g.ja}\`;
         btn.addEventListener('click', () => {
           if (this._activeGenres.has(g.id)) this._activeGenres.delete(g.id);
           else this._activeGenres.add(g.id);
@@ -644,9 +643,9 @@
           const genre = GENRES.find((g) => (shop.genres || [])[0] === g.id);
           el.style.setProperty('--pin-color', (genre && genre.color) || '#e8734a');
           if (shop.pinIcon) {
-            el.innerHTML = `<img src="${shop.pinIcon}" alt="">`;
+            el.innerHTML = \`<img src="\${shop.pinIcon}" alt="">\`;
           } else {
-            el.innerHTML = `<span>${(genre && genre.icon) || '📍'}</span>`;
+            el.innerHTML = \`<span>\${(genre && genre.icon) || '📍'}</span>\`;
           }
           el.addEventListener('click', (ev) => {
             ev.stopPropagation();
@@ -678,22 +677,22 @@
       const name = lang === 'en' && shop.nameEn ? shop.nameEn : shop.name;
       const desc = lang === 'en' ? shop.descriptionEn : shop.descriptionJa;
       const links = [];
-      if (shop.url) links.push(`<a href="${shop.url}" target="_blank" rel="noopener">${this._t('website')}</a>`);
+      if (shop.url) links.push(\`<a href="\${shop.url}" target="_blank" rel="noopener">\${this._t('website')}</a>\`);
       (shop.sns || []).forEach((s) => {
-        if (s && s.url) links.push(`<a href="${s.url}" target="_blank" rel="noopener">${s.label || this._t('website')}</a>`);
+        if (s && s.url) links.push(\`<a href="\${s.url}" target="_blank" rel="noopener">\${s.label || this._t('website')}</a>\`);
       });
 
-      this._els.sheetBody.innerHTML = `
-        ${shop.photo ? `<img class="rm-photo" src="${shop.photo}" alt="${name}">` : ''}
-        <h2>${name}</h2>
-        ${shop.address ? `<div class="rm-sub">${shop.address}</div>` : ''}
-        ${desc ? `<p class="rm-desc">${desc}</p>` : ''}
-        ${shop.hours ? `<div class="rm-meta"><b>${this._t('hours')}</b>${shop.hours}</div>` : ''}
-        ${links.length ? `<div class="rm-links">${links.join('')}</div>` : ''}
-        <button class="rm-directions" type="button">${this._t('directions')}</button>
-      `;
+      this._els.sheetBody.innerHTML = \`
+        \${shop.photo ? \`<img class="rm-photo" src="\${shop.photo}" alt="\${name}">\` : ''}
+        <h2>\${name}</h2>
+        \${shop.address ? \`<div class="rm-sub">\${shop.address}</div>\` : ''}
+        \${desc ? \`<p class="rm-desc">\${desc}</p>\` : ''}
+        \${shop.hours ? \`<div class="rm-meta"><b>\${this._t('hours')}</b>\${shop.hours}</div>\` : ''}
+        \${links.length ? \`<div class="rm-links">\${links.join('')}</div>\` : ''}
+        <button class="rm-directions" type="button">\${this._t('directions')}</button>
+      \`;
       this._els.sheetBody.querySelector('.rm-directions').addEventListener('click', () => {
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`, '_blank');
+        window.open(\`https://www.google.com/maps/dir/?api=1&destination=\${shop.lat},\${shop.lng}\`, '_blank');
       });
       this._els.sheet.classList.add('open');
       this.dispatchEvent(new CustomEvent('shopselected', { detail: { id: shop.id }, bubbles: true, composed: true }));
