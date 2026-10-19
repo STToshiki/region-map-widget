@@ -41,6 +41,12 @@
     { id: 'stay', ja: '宿泊', en: 'Stay', icon: '🛏️', color: '#5a9e6f' },
   ];
 
+  // 地図上に常時表示する装飾イラスト（店舗データとは別に、ランドマークとして固定表示）。
+  const LANDMARKS_BASE = 'https://raw.githubusercontent.com/STToshiki/region-map-widget/main/assets/';
+  const LANDMARKS = [
+    { id: 'inakawa-ski', lat: 39.166944, lng: 140.54188, image: LANDMARKS_BASE + 'inakawa-ski.png', width: 220 },
+  ];
+
   const STRINGS = {
     ja: {
       all: '全エリア',
@@ -478,12 +484,30 @@
       this._map.on('load', () => {
         this._mapReady = true;
         this._renderAreaTabs();
+        this._renderLandmarks();
         this._applyFilters();
         this._flyToArea(this._activeArea, true);
         this.dispatchEvent(new CustomEvent('ready', { bubbles: true, composed: true }));
       });
 
       this._observeResize();
+    }
+
+    // 店舗データとは独立した装飾イラスト（スキー場のアイコンなど）を、
+    // フィルターの影響を受けない常時表示のマーカーとして地図に追加する。
+    _renderLandmarks() {
+      LANDMARKS.forEach((lm) => {
+        const el = document.createElement('img');
+        el.src = lm.image;
+        el.alt = '';
+        el.style.width = (lm.width || 160) + 'px';
+        el.style.height = 'auto';
+        el.style.pointerEvents = 'none';
+        el.style.userSelect = 'none';
+        new window.maplibregl.Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([lm.lng, lm.lat])
+          .addTo(this._map);
+      });
     }
 
     // Wixはページのレイアウト計算（セクション幅の確定など）が、この要素が
