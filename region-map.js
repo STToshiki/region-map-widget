@@ -45,6 +45,7 @@
   const LANDMARKS_BASE = 'https://raw.githubusercontent.com/STToshiki/region-map-widget/main/assets/';
   const LANDMARKS = [
     { id: 'inakawa-ski', lat: 39.166944, lng: 140.54188, image: LANDMARKS_BASE + 'inakawa-ski.png', width: 220 },
+    { id: 'ryokufuso', lat: 39.161272, lng: 140.544044, image: LANDMARKS_BASE + '緑風荘.png', width: 150 },
   ];
 
   const STRINGS = {
